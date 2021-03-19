@@ -11,6 +11,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/ardanlabs/service/business/data/schema"
+	"github.com/ardanlabs/service/foundation/database"
 	"github.com/dgrijalva/jwt-go/v4"
 	"github.com/pkg/errors"
 )
@@ -24,6 +26,34 @@ func main() {
 func run() error {
 	// return genkey()
 	return gentoken()
+	// return seed()
+}
+
+func seed() error {
+	cfg := database.Config{
+		User:       "postgres",
+		Password:   "postgres",
+		Host:       "0.0.0.0",
+		Name:       "postgres",
+		DisableTLS: true,
+	}
+
+	db, err := database.Open(cfg)
+	if err != nil {
+		return errors.Wrap(err, "connect database")
+	}
+	defer db.Close()
+
+	if err := schema.Migrate(db); err != nil {
+		return errors.Wrap(err, "migrate database")
+	}
+
+	if err := schema.Seed(db); err != nil {
+		return errors.Wrap(err, "seed database")
+	}
+
+	fmt.Println("Database Seeded")
+	return nil
 }
 
 func gentoken() error {

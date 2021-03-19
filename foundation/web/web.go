@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/dimfeld/httptreemux"
+	"github.com/dimfeld/httptreemux/v5"
 	"github.com/google/uuid"
 )
 

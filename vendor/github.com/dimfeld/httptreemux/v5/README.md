@@ -7,6 +7,10 @@ This is inspired by [Julien Schmidt's httprouter](https://www.github.com/juliens
 
 Release notes may be found using the [Github releases tab](https://github.com/dimfeld/httptreemux/releases). Version numbers are compatible with the [Semantic Versioning 2.0.0](http://semver.org/) convention, and a new release is made after every change to the code.
 
+## Installing with Go Modules
+
+When using Go Modules, import this repository with `import "github.com/dimfeld/httptreemux/v5"` to ensure that you get the right version.
+
 ## Why?
 There are a lot of good routers out there. But looking at the ones that were really lightweight, I couldn't quite get something that fit with the route patterns I wanted. The code itself is simple enough, so I spent an evening writing this.
 
@@ -32,9 +36,15 @@ group.GET("/v1/:id", func(w http.ResponseWriter, r *http.Request, params map[str
 // UsingContext returns a version of the router or group with context support.
 ctxGroup := group.UsingContext() // sibling to 'group' node in tree
 ctxGroup.GET("/v2/:id", func(w http.ResponseWriter, r *http.Request) {
-    params := httptreemux.ContextParams(r.Context())
+    ctxData := httptreemux.ContextData(r.Context())
+    params := ctxData.Params()
     id := params["id"]
-    fmt.Fprintf(w, "GET /api/v2/%s", id)
+
+    // Useful for middleware to see which route was hit without dealing with wildcards
+    routePath := ctxData.Route()
+
+    // Prints GET /api/v2/:id id=...
+    fmt.Fprintf(w, "GET %s id=%s", routePath, id)
 })
 
 http.ListenAndServe(":8080", router)
@@ -52,11 +62,17 @@ router.GET("/:page", func(w http.ResponseWriter, r *http.Request) {
     fmt.Fprintf(w, "GET /%s", params["page"])
 })
 
-group := tree.NewGroup("/api")
+group := router.NewGroup("/api")
 group.GET("/v1/:id", func(w http.ResponseWriter, r *http.Request) {
-    params := httptreemux.ContextParams(r.Context())
+    ctxData := httptreemux.ContextData(r.Context())
+    params := ctxData.Params()
     id := params["id"]
-    fmt.Fprintf(w, "GET /api/v1/%s", id)
+
+    // Useful for middleware to see which route was hit without dealing with wildcards
+    routePath := ctxData.Route()
+
+    // Prints GET /api/v1/:id id=...
+    fmt.Fprintf(w, "GET %s id=%s", routePath, id)
 })
 
 http.ListenAndServe(":8080", router)
@@ -82,7 +98,7 @@ Note that all of the above URL patterns may exist concurrently in the router.
 
 Path elements starting with `:` indicate a wildcard in the path. A wildcard will only match on a single path segment. That is, the pattern `/post/:postid` will match on `/post/1` or `/post/1/`, but not `/post/1/2`.
 
-A path element starting with `*` is a catch-all, whose value will be a string containing all text in the URL matched by the wildcards. For example, with a pattern of `/images/*path` and a requested URL `images/abc/def`, path would contain `abc/def`.
+A path element starting with `*` is a catch-all, whose value will be a string containing all text in the URL matched by the wildcards. For example, with a pattern of `/images/*path` and a requested URL `images/abc/def`, path would contain `abc/def`. A catch-all path will not match an empty string, so in this example a separate route would need to be installed if you also want to match `/images/`.
 
 #### Using : and * in routing patterns
 
@@ -231,8 +247,12 @@ When matching on parameters in a route, the `gorilla/pat` router will modify
 query string. `httptreemux` does not do this. See [Issue #26](https://github.com/dimfeld/httptreemux/issues/26) for more details and a
 code snippet that can perform this transformation for you, should you want it.
 
+### httprouter and catch-all parameters
+
+When using `httprouter`, a route with a catch-all parameter (e.g. `/images/*path`) will match on URLs like `/images/` where the catch-all parameter is empty. This router does not match on empty catch-all parameters, but the behavior can be duplicated by adding a route without the catch-all (e.g. `/images/`).
+
 ## Middleware
-This package provides no middleware. But there are a lot of great options out there and it's pretty easy to write your own.
+This package provides no middleware. But there are a lot of great options out there and it's pretty easy to write your own. The router provides the `Use` and `UseHandler` functions to ease the creation of middleware chains. (Real documentation of these functions coming soon.)
 
 # Acknowledgements
 
