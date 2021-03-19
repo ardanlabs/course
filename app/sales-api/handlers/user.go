@@ -14,7 +14,7 @@ import (
 )
 
 type userGroup struct {
-	user user.User
+	data user.User
 	auth *auth.Auth
 }
 
@@ -34,7 +34,7 @@ func (ug userGroup) query(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return validate.NewRequestError(fmt.Errorf("invalid rows format: %s", params["rows"]), http.StatusBadRequest)
 	}
 
-	users, err := ug.user.Query(ctx, v.TraceID, pageNumber, rowsPerPage)
+	users, err := ug.data.Query(ctx, v.TraceID, pageNumber, rowsPerPage)
 	if err != nil {
 		return errors.Wrap(err, "unable to query for users")
 	}
@@ -54,7 +54,7 @@ func (ug userGroup) token(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return validate.NewRequestError(err, http.StatusUnauthorized)
 	}
 
-	claims, err := ug.user.Authenticate(ctx, v.TraceID, v.Now, email, pass)
+	claims, err := ug.data.Authenticate(ctx, v.TraceID, v.Now, email, pass)
 	if err != nil {
 		switch errors.Cause(err) {
 		case user.ErrAuthenticationFailure:
